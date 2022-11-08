@@ -1,23 +1,15 @@
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate html5ever;
-#[macro_use]
-extern crate lazy_static;
-extern crate kuchiki;
-extern crate regex;
-extern crate url;
-
 use std::cmp;
 use std::iter;
 use std::f32;
 use std::fmt;
 
 use regex::Regex;
-use html5ever::QualName;
+use html5ever::{QualName, local_name, namespace_url, ns};
 use kuchiki::{NodeRef, NodeDataRef, NodeData, ElementData, Attributes};
 use kuchiki::traits::TendrilSink;
 use kuchiki::iter::NodeIterator;
+use lazy_static::lazy_static;
+use log::trace;
 use url::Url;
 
 use node_cache::NodeCache;

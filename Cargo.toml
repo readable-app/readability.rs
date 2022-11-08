@@ -1,5 +1,6 @@
 [package]
 name = "readability"
+edition = "2021"
 version = "0.1.0"
 description = "Really fast readability."
 keywords = ["dom", "html", "text", "extraction"]

@@ -1,9 +1,3 @@
-extern crate env_logger;
-extern crate log;
-extern crate kuchiki;
-extern crate readability;
-extern crate url;
-
 use std::io::Write;
 
 use kuchiki::NodeRef;
