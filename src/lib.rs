@@ -335,7 +335,7 @@ fn fix_relative_urls(attributes: &mut Attributes, base_url: &Url) {
         }
 
         if let Ok(resolved) = base.join(&url) {
-            *url = resolved.into_string();
+            *url = resolved.into();
         }
     }
 
