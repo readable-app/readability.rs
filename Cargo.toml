@@ -9,9 +9,6 @@ repository = "https://github.com/loyd/readability.rs"
 license = "MIT"
 readme = "README.md"
 
-[badges]
-travis-ci = { repository = "loyd/readability.rs" }
-
 [dependencies]
 log = "0.4.17"
 kuchiki = "0.8.1"
