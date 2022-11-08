@@ -4,8 +4,17 @@ use std::hash::{Hash, Hasher};
 use kuchiki::{Node, NodeRef};
 
 
-#[derive(PartialEq, Eq)]
 struct HashableNodeRef(NodeRef);
+
+impl PartialEq for HashableNodeRef {
+    fn eq(&self, other: &Self) -> bool {
+        let self_ptr: *const Node = &*(self.0).0;
+        let other_ptr: *const Node = &*(other.0).0;
+        self_ptr == other_ptr
+    }
+}
+
+impl Eq for HashableNodeRef {}
 
 impl Hash for HashableNodeRef {
     fn hash<H: Hasher>(&self, state: &mut H) {
