@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate log;
 #[macro_use]
-extern crate html5ever_atoms;
+extern crate html5ever;
 #[macro_use]
 extern crate lazy_static;
 extern crate kuchiki;
@@ -14,7 +14,7 @@ use std::f32;
 use std::fmt;
 
 use regex::Regex;
-use html5ever_atoms::QualName;
+use html5ever::QualName;
 use kuchiki::{NodeRef, NodeDataRef, NodeData, ElementData, Attributes};
 use kuchiki::traits::TendrilSink;
 use kuchiki::iter::NodeIterator;
@@ -49,8 +49,10 @@ trait NodeRefExt {
         let node = self.node_ref();
 
         if let Some(elem) = node.as_element() {
-            let mut attributes = elem.attributes.borrow_mut();
-            let replacement = NodeRef::new_element(name, attributes.map.drain());
+            // I'd like find a way to do this without clone(), but 
+            // I'm not sure how because BTreeMap doesn't have drain()
+            let attributes = elem.attributes.borrow();
+            let replacement = NodeRef::new_element(name, attributes.map.clone());
 
             for child in node.children() {
                 replacement.append(child);
@@ -121,7 +123,13 @@ lazy_static! {
 }
 
 macro_rules! tag {
-    ($name:tt) => { qualname!(html, $name) };
+    ($name:tt) => { 
+        QualName {
+            prefix: None,
+            ns: ns!(html),
+            local: local_name!($name),
+        }
+    };
 }
 
 macro_rules! attrib {
