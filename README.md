@@ -1,6 +1,6 @@
 Readability.rs
 ==============
 
-Fast arc90's readability.js port to Rust with improvements and tests from [mozilla/readability](https://github.com/mozilla/readability).
+Article-extraction library used by [Readable](https://github.com/readable-app/readable).
 
-Forked from [loyd/readability.rs](https://github.com/loyd/readability.rs).
+Forked from [loyd/readability.rs](https://github.com/loyd/readability.rs), which itself is based on [mozilla/readability](https://github.com/mozilla/readability) and the [Arc90 readability experiment](https://github.com/masukomi/arc90-readability).
