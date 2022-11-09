@@ -13,7 +13,7 @@ use readability::Readability;
 
 macro_rules! include_sample_file {
     ($name:ident, $file:expr) => {
-        include_str!(concat!("../samples/", stringify!($name), "/", $file));
+        include_str!(concat!("../samples/", stringify!($name), "/", $file))
     }
 }
 

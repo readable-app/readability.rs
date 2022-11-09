@@ -1,12 +1,5 @@
-extern crate env_logger;
-extern crate log;
-extern crate kuchiki;
-extern crate readability;
-extern crate url;
+use std::io::Write;
 
-use std::env;
-
-use env_logger::LogBuilder;
 use kuchiki::NodeRef;
 use kuchiki::NodeData::*;
 use kuchiki::traits::TendrilSink;
@@ -95,20 +88,15 @@ fn stringify_node(node: &NodeRef) -> String {
 }
 
 fn setup_logger() {
-    let env = match env::var("RUST_LOG") {
-        Ok(env) => env,
-        Err(_) => return
-    };
-
-    let _ = LogBuilder::new()
-        .format(|record| format!("{}", record.args()))
-        .parse(&env)
-        .init();
+    let _ = env_logger::Builder::new()
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .parse_default_env()
+        .try_init();
 }
 
 macro_rules! include_sample_file {
     ($name:ident, $file:expr) => {
-        include_str!(concat!("../samples/", stringify!($name), "/", $file));
+        include_str!(concat!("../samples/", stringify!($name), "/", $file))
     }
 }
 

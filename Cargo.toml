@@ -1,5 +1,6 @@
 [package]
 name = "readability"
+edition = "2021"
 version = "0.1.0"
 description = "Really fast readability."
 keywords = ["dom", "html", "text", "extraction"]
@@ -8,16 +9,13 @@ repository = "https://github.com/loyd/readability.rs"
 license = "MIT"
 readme = "README.md"
 
-[badges]
-travis-ci = { repository = "loyd/readability.rs" }
-
 [dependencies]
-log = "^0.3.7"
-kuchiki = "^0.4.1"
-lazy_static = "^0.2.1"
-regex = "^0.2.1"
-html5ever-atoms = "^0.2.1"
-url = "^1.4.0"
+log = "0.4.17"
+kuchiki = "0.8.1"
+html5ever = "0.25.2"
+lazy_static = "1.4.0"
+regex = "1.6.0"
+url = "2.3.1"
 
 [dev-dependencies]
-env_logger = "^0.4.2"
+env_logger = "0.9.3"

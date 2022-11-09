@@ -1,23 +1,15 @@
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate html5ever_atoms;
-#[macro_use]
-extern crate lazy_static;
-extern crate kuchiki;
-extern crate regex;
-extern crate url;
-
 use std::cmp;
 use std::iter;
 use std::f32;
 use std::fmt;
 
 use regex::Regex;
-use html5ever_atoms::QualName;
+use html5ever::{QualName, local_name, namespace_url, ns};
 use kuchiki::{NodeRef, NodeDataRef, NodeData, ElementData, Attributes};
 use kuchiki::traits::TendrilSink;
 use kuchiki::iter::NodeIterator;
+use lazy_static::lazy_static;
+use log::trace;
 use url::Url;
 
 use node_cache::NodeCache;
@@ -49,8 +41,10 @@ trait NodeRefExt {
         let node = self.node_ref();
 
         if let Some(elem) = node.as_element() {
-            let mut attributes = elem.attributes.borrow_mut();
-            let replacement = NodeRef::new_element(name, attributes.map.drain());
+            // I'd like find a way to do this without clone(), but 
+            // I'm not sure how because BTreeMap doesn't have drain()
+            let attributes = elem.attributes.borrow();
+            let replacement = NodeRef::new_element(name, attributes.map.clone());
 
             for child in node.children() {
                 replacement.append(child);
@@ -89,13 +83,13 @@ impl NodeRefExt for ElemRef {
 
 lazy_static! {
     static ref UNLIKELY_CANDIDATE: Regex = Regex::new(r"(?xi)
-        banner|breadcrumbs|combx|comment|community|cover-wrap|disqus|extra|foot|header|legends|menu|
+        -ad-|ai2html|banner|breadcrumbs|combx|comment|community|cover-wrap|disqus|extra|footer|gdpr|header|legends|menu|
         modal|related|remark|replies|rss|shoutbox|sidebar|skyscraper|social|sponsor|supplemental|
         ad-break|agegate|pagination|pager|popup|yom-remote
     ").unwrap();
 
     static ref MAYBE_CANDIDATE: Regex = Regex::new(r"(?xi)
-        and|article|body|column|main|shadow
+        and|article|body|column|content|main|shadow
     ").unwrap();
 
     static ref POSITIVE: Regex = Regex::new(r"(?xi)
@@ -103,8 +97,8 @@ lazy_static! {
     ").unwrap();
 
     static ref NEGATIVE: Regex = Regex::new(r"(?xi)
-        hidden|^hid$|\shid$|\shid\s|^hid\s|banner|combx|comment|com-|contact|foot|footer|footnote|
-        masthead|media|meta|modal|outbrain|promo|related|scroll|share|shoutbox|sidebar|skyscraper|
+        -ad-|hidden|^hid$|\shid$|\shid\s|^hid\s|banner|combx|comment|com-|contact|foot|footer|footnote|
+        gdpr|masthead|media|meta|modal|outbrain|promo|related|scroll|share|shoutbox|sidebar|skyscraper|
         sponsor|shopping|tags|tool|widget
     ").unwrap();
 
@@ -121,7 +115,13 @@ lazy_static! {
 }
 
 macro_rules! tag {
-    ($name:tt) => { qualname!(html, $name) };
+    ($name:tt) => { 
+        QualName {
+            prefix: None,
+            ns: ns!(html),
+            local: local_name!($name),
+        }
+    };
 }
 
 macro_rules! attrib {
@@ -144,6 +144,7 @@ fn extract_byline(elem: &ElemRef) -> Option<String> {
         let text = elem.text_contents();
         let byline = text.trim();
 
+        #[allow(clippy::len_zero)]
         if 0 < byline.len() && byline.len() < 100 {
             Some(byline.to_string())
         } else {
@@ -218,10 +219,10 @@ fn has_single_p(node: &NodeRef) -> bool {
 }
 
 fn has_block_elem(node: &NodeRef) -> bool {
-    node.descendants().elements().any(|elem| match elem.name {
+    node.descendants().elements().any(|elem| matches!{
+        elem.name,
         tag!("a") | tag!("blockquote") | tag!("dl") | tag!("div") | tag!("img") | tag!("ol") |
-        tag!("p") | tag!("pre") | tag!("table") | tag!("ul") | tag!("select") => true,
-        _ => false
+        tag!("p") | tag!("pre") | tag!("table") | tag!("ul") | tag!("select")
     })
 }
 
@@ -251,10 +252,10 @@ fn count_chars(text: &str) -> (u32, u32) {
 }
 
 fn is_tag_to_score(tag: &QualName) -> bool {
-    match *tag {
+    matches!{
+        *tag,
         tag!("section") | tag!("p") | tag!("td") | tag!("pre") |
-        tag!("h2") | tag!("h3") | tag!("h4") | tag!("h5") | tag!("h6") => true,
-        _ => false
+        tag!("h2") | tag!("h3") | tag!("h4") | tag!("h5") | tag!("h6")
     }
 }
 
@@ -334,8 +335,8 @@ fn fix_relative_urls(attributes: &mut Attributes, base_url: &Url) {
             return;
         }
 
-        if let Ok(resolved) = base.join(&url) {
-            *url = resolved.into_string();
+        if let Ok(resolved) = base.join(url) {
+            *url = resolved.into();
         }
     }
 
@@ -349,10 +350,7 @@ fn fix_relative_urls(attributes: &mut Attributes, base_url: &Url) {
 }
 
 fn is_acceptable_top_level(tag: &QualName) -> bool {
-    match *tag {
-        tag!("div") | tag!("article") | tag!("section") | tag!("p") => true,
-        _ => false
-    }
+    matches!(*tag, tag!("div") | tag!("article") | tag!("section") | tag!("p"))
 }
 
 #[derive(Default, PartialEq, Clone)]
@@ -407,6 +405,12 @@ pub struct Readability {
     clean_conditionally: bool,
     clean_attributes: bool,
     base_url: Option<Url>
+}
+
+impl Default for Readability {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Readability {
@@ -520,16 +524,10 @@ impl Readability {
 
         for child in node.children() {
             let remove = match *child.data() {
-                NodeData::Comment(_) |
-                NodeData::DocumentFragment => true,
+                NodeData::Comment(_) | NodeData::DocumentFragment => true,
                 NodeData::Text(ref data) => data.borrow().trim().is_empty(),
                 NodeData::Element(ref elem) => {
-                    match elem.name {
-                        tag!("script") |
-                        tag!("style") |
-                        tag!("noscript") => true,
-                        _ => false
-                    }
+                    matches!(elem.name, tag!("script") | tag!("style") | tag!("noscript"))
                 },
                 _ => false
             };
@@ -580,19 +578,19 @@ impl Readability {
                 parent_info.commas += comma_cnt;
             },
             NodeData::Element(ElementData { ref name, ref attributes, .. }) => {
-                trace!("</{}> {}", format_tag(node), format_info(self.info.get(&node)));
+                trace!("</{}> {}", format_tag(node), format_info(self.info.get(node)));
 
                 // FIXME: don't propagate info of bad nodes.
                 self.propagate_info(node);
 
                 if is_tag_to_score(name) {
-                    self.score_node(&node);
+                    self.score_node(node);
                 }
 
                 let elem = node.clone().into_element_ref().unwrap();
 
                 // TODO: don't create info if it's not necessary.
-                if !is_stuffed(&elem, self.info.get_or_create(&node)) {
+                if !is_stuffed(&elem, self.info.get_or_create(node)) {
                     node.remove();
                     trace!("    => removed (it's not stuffed)");
 
@@ -600,7 +598,7 @@ impl Readability {
                 }
 
                 if self.clean_conditionally && !self.is_conditionally_acceptable(&elem) {
-                    if let Some(info) = self.info.get(&node) {
+                    if let Some(info) = self.info.get(node) {
                         info.is_candidate = false;
                     }
 
@@ -626,12 +624,12 @@ impl Readability {
                 let mut attributes = attributes.borrow_mut();
 
                 if self.clean_attributes {
-                    clean_attributes(&mut *attributes);
+                    clean_attributes(&mut attributes);
                 }
 
                 if let Some(ref base_url) = self.base_url {
                     if *name == tag!("a") || *name == tag!("img") {
-                        fix_relative_urls(&mut *attributes, base_url);
+                        fix_relative_urls(&mut attributes, base_url);
                     }
                 }
             },
@@ -729,11 +727,12 @@ impl Readability {
     fn calculate_content_score(&mut self, node: &NodeRef) -> Option<f32> {
         let parent_elem = node.parent().and_then(|p| p.into_element_ref());
 
+        #[allow(clippy::question_mark)]
         if parent_elem.is_none() {
             return None;
         }
 
-        let info = self.info.get_or_create(&node);
+        let info = self.info.get_or_create(node);
 
         if info.text_len < 25 {
             return None;
@@ -850,7 +849,7 @@ impl Readability {
             let mut n = 0;
 
             for candidate in &self.candidates[1..] {
-                if candidate.as_node().ancestors().find(|a| a == &common).is_some() {
+                if candidate.as_node().ancestors().any(|a| a == common) {
                     n += 1;
                 }
 
@@ -861,7 +860,7 @@ impl Readability {
             }
         }
 
-        return best.clone();
+        best.clone()
     }
 
     fn correct_candidate(&mut self, mut candidate: NodeRef) -> NodeRef {
@@ -894,7 +893,7 @@ impl Readability {
             let mut child_it = parent.children();
 
             !parent.is(tag!("body")) && child_it.next().is_some() && child_it.next().is_none() &&
-                self.info.get(&parent).map_or(true, |info| !info.is_shabby)
+                self.info.get(parent).map_or(true, |info| !info.is_shabby)
         });
 
         let result = parent_it.last().map_or(candidate, |parent| {
