@@ -5,7 +5,7 @@ use kuchiki::NodeData::*;
 use kuchiki::traits::TendrilSink;
 use url::Url;
 
-use readability::Readability;
+use readable_readability::Readability;
 
 
 fn compare_trees(actual: &NodeRef, expected: &NodeRef) {

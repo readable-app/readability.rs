@@ -1,6 +1,6 @@
 #![feature(test)]
 
-extern crate readability;
+extern crate readable_readability;
 extern crate url;
 
 extern crate test;
@@ -8,7 +8,7 @@ extern crate test;
 use test::Bencher;
 use url::Url;
 
-use readability::Readability;
+use readable_readability::Readability;
 
 
 macro_rules! include_sample_file {

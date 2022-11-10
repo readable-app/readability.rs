@@ -14,6 +14,7 @@ use url::Url;
 
 use node_cache::NodeCache;
 
+mod metadata;
 mod node_cache;
 
 // TODO: add examples.
