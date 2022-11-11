@@ -3,9 +3,28 @@ use std::io::Write;
 use kuchiki::NodeRef;
 use kuchiki::NodeData::*;
 use kuchiki::traits::TendrilSink;
+use serde::Deserialize;
 use url::Url;
 
-use readable_readability::Readability;
+use readable_readability::{Readability, Metadata};
+
+
+// duplicate the Metadata struct so we can implement Deserialize
+#[derive(Deserialize)]
+struct TestMetadata {
+    pub page_title: Option<String>,
+    pub article_title: Option<String>,
+    pub byline: Option<String>,
+    pub description: Option<String>,
+}
+
+
+fn compare_metadata(actual: &Metadata, expected: &TestMetadata) {
+    assert_eq!(actual.page_title, expected.page_title);
+    assert_eq!(actual.article_title, expected.article_title);
+    assert_eq!(actual.byline, expected.byline);
+    assert_eq!(actual.description, expected.description);
+}
 
 
 fn compare_trees(actual: &NodeRef, expected: &NodeRef) {
@@ -106,10 +125,11 @@ macro_rules! test_sample {
         fn $name() {
             static SOURCE: &'static str = include_sample_file!($name, "source.html");
             static EXPECTED: &'static str = include_sample_file!($name, "expected.html");
+            static EXPECTED_META: &'static str = include_sample_file!($name, "metadata.json");
 
             setup_logger();
 
-            let (actual_tree, meta) = Readability::new()
+            let (actual_tree, actual_meta) = Readability::new()
                 .base_url(Url::parse("http://fakehost/test/page.html").unwrap())
                 .parse(SOURCE);
 
@@ -117,6 +137,9 @@ macro_rules! test_sample {
                 .select("body > *").unwrap().next().unwrap().as_node().clone();
 
             compare_trees(&actual_tree, &expected_tree);
+
+            let expected_meta = serde_json::from_str(EXPECTED_META).unwrap();
+            compare_metadata(&actual_meta, &expected_meta);
         }
     };
 }

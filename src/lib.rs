@@ -12,7 +12,7 @@ use lazy_static::lazy_static;
 use log::trace;
 use url::Url;
 
-use metadata::Metadata;
+pub use metadata::Metadata;
 use node_cache::NodeCache;
 
 mod metadata;

@@ -6,11 +6,12 @@ const TITLE_KEYS: [&str; 6] = [
     "og:title", "twitter:title", "dc:title", "dcterm:title",
     "weibo:article:title", "weibo:webpage:title",
 ];
-const BYLINE_KEYS: [&str; 4] = [
-    "author", "dc:creator", "dcterm:creator", "byl",
+const BYLINE_KEYS: [&str; 6] = [
+    "author", "dc:creator", "dcterm:creator", "og:article:author",
+    "article:author", "byl",
 ];
 const DESCRIPTION_KEYS: [&str; 7] = [
-    "description", "og:description", "dc:description", "dcterm:description",
+    "description", "dc:description", "dcterm:description", "og:description",
     "weibo:article:description", "weibo:webpage:description", "twitter:description"
 ];
 
@@ -105,6 +106,7 @@ fn extract_meta_content(root: &NodeRef, expected_types: &[&str]) -> Option<Strin
 }
 
 
+#[allow(unused_imports)]
 use kuchiki::{parse_html, traits::TendrilSink};
 
 #[test]
