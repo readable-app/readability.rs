@@ -109,14 +109,14 @@ macro_rules! test_sample {
 
             setup_logger();
 
-            let actual = Readability::new()
+            let (actual_tree, meta) = Readability::new()
                 .base_url(Url::parse("http://fakehost/test/page.html").unwrap())
                 .parse(SOURCE);
 
-            let expected = kuchiki::parse_html().one(EXPECTED)
+            let expected_tree = kuchiki::parse_html().one(EXPECTED)
                 .select("body > *").unwrap().next().unwrap().as_node().clone();
 
-            compare_trees(&actual, &expected);
+            compare_trees(&actual_tree, &expected_tree);
         }
     };
 }

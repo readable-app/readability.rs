@@ -12,6 +12,7 @@ use lazy_static::lazy_static;
 use log::trace;
 use url::Url;
 
+use metadata::Metadata;
 use node_cache::NodeCache;
 
 mod metadata;
@@ -456,8 +457,10 @@ impl Readability {
         self
     }
 
-    pub fn parse(&mut self, html: &str) -> NodeRef {
+    pub fn parse(&mut self, html: &str) -> (NodeRef, Metadata) {
         let top_level = kuchiki::parse_html().one(html);
+
+        let metadata = metadata::extract(&top_level);
 
         let top_level = top_level.select("html > body").unwrap().next()
             .map_or(top_level, |b| b.as_node().clone());
@@ -465,7 +468,7 @@ impl Readability {
         top_level.detach();
 
         // TODO: retry with fewer restrictions.
-        self.readify(top_level)
+        (self.readify(top_level), metadata)
     }
 
     fn readify(&mut self, top_level: NodeRef) -> NodeRef {
