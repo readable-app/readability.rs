@@ -89,7 +89,7 @@ lazy_static! {
     ").unwrap();
 
     static ref MAYBE_CANDIDATE: Regex = Regex::new(r"(?xi)
-        and|article|body|column|content|main|shadow
+        and|article|body|column|main|shadow
     ").unwrap();
 
     static ref POSITIVE: Regex = Regex::new(r"(?xi)
