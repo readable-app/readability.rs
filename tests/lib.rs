@@ -14,6 +14,7 @@ use readable_readability::{Readability, Metadata};
 struct TestMetadata {
     pub page_title: Option<String>,
     pub article_title: Option<String>,
+    pub image_url: Option<String>,
     pub byline: Option<String>,
     pub description: Option<String>,
 }
@@ -22,6 +23,7 @@ struct TestMetadata {
 fn compare_metadata(actual: &Metadata, expected: &TestMetadata) {
     assert_eq!(actual.page_title, expected.page_title);
     assert_eq!(actual.article_title, expected.article_title);
+    assert_eq!(actual.image_url, expected.image_url);
     assert_eq!(actual.byline, expected.byline);
     assert_eq!(actual.description, expected.description);
 }

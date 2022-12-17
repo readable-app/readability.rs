@@ -14,11 +14,15 @@ const DESCRIPTION_KEYS: [&str; 7] = [
     "description", "dc:description", "dcterm:description", "og:description",
     "weibo:article:description", "weibo:webpage:description", "twitter:description"
 ];
+const IMAGE_KEYS: [&str; 3] = [
+    "og:image", "og:image:url", "twitter:image",
+];
 
 
 pub struct Metadata {
     pub page_title: Option<String>,
     pub article_title: Option<String>,
+    pub image_url: Option<String>,
     pub byline: Option<String>,
     pub description: Option<String>,
 }
@@ -37,9 +41,10 @@ pub fn extract(root: &NodeRef) -> Metadata {
         _ => (),
     }
 
+    let image_url = extract_meta_content(root, &IMAGE_KEYS);
     let byline = extract_meta_content(root, &BYLINE_KEYS);
     let description = get_article_description(root);
-    Metadata {page_title, article_title, byline, description}
+    Metadata {page_title, article_title, image_url, byline, description}
 }
 
 
@@ -106,24 +111,31 @@ fn extract_meta_content(root: &NodeRef, expected_types: &[&str]) -> Option<Strin
 }
 
 
-#[allow(unused_imports)]
-use kuchiki::{parse_html, traits::TendrilSink};
+mod tests {
+    #![cfg(test)]
+    use super::*;
+    use kuchiki::{parse_html, traits::TendrilSink};
 
-#[test]
-fn test_extract() {
-    const DOC: &str = 
-        "<!doctype html>
-        <head>
-            <title>Some Article - Some Site</title>
-            <meta name=\"og:title\" content=\"Some Article\">
-            <meta property=\"author\" content=\"Joe Schmoe\">
-            <meta itemprop=\"dcterm:description\" content=\"A test article for test cases.\">
-        </head>
-        <body>
-        </body>";
+    #[test]
+    fn test_extract() {
+        const DOC: &str = 
+            "<!doctype html>
+            <head>
+                <title>Some Article - Some Site</title>
+                <meta name=\"og:title\" content=\"Some Article\">
+                <meta name=\"og:image\" content=\"https://somesite.com/image.png\">
+                <meta property=\"author\" content=\"Joe Schmoe\">
+                <meta itemprop=\"dcterm:description\" content=\"A test article for test cases.\">
+            </head>
+            <body>
+            </body>";
 
-    let root = kuchiki::parse_html().one(DOC);
-    let metadata = extract(&root);
-    assert_eq!(metadata.page_title, Some("Some Article - Some Site".into()));
-    assert_eq!(metadata.article_title, Some("Some Article".into()));
+        let root = kuchiki::parse_html().one(DOC);
+        let metadata = extract(&root);
+        assert_eq!(metadata.page_title, Some("Some Article - Some Site".into()));
+        assert_eq!(metadata.article_title, Some("Some Article".into()));
+        assert_eq!(metadata.image_url, Some("https://somesite.com/image.png".into()));
+        assert_eq!(metadata.byline, Some("Joe Schmoe".into()));
+        assert_eq!(metadata.description, Some("A test article for test cases.".into()));
+    }
 }
