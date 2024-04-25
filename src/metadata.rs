@@ -1,23 +1,32 @@
 use html5ever::local_name;
-use kuchiki::NodeRef;
-
+use kuchikiki::NodeRef;
 
 const TITLE_KEYS: [&str; 6] = [
-    "og:title", "twitter:title", "dc:title", "dcterm:title",
-    "weibo:article:title", "weibo:webpage:title",
+    "og:title",
+    "twitter:title",
+    "dc:title",
+    "dcterm:title",
+    "weibo:article:title",
+    "weibo:webpage:title",
 ];
 const BYLINE_KEYS: [&str; 6] = [
-    "author", "dc:creator", "dcterm:creator", "og:article:author",
-    "article:author", "byl",
+    "author",
+    "dc:creator",
+    "dcterm:creator",
+    "og:article:author",
+    "article:author",
+    "byl",
 ];
 const DESCRIPTION_KEYS: [&str; 7] = [
-    "description", "dc:description", "dcterm:description", "og:description",
-    "weibo:article:description", "weibo:webpage:description", "twitter:description"
+    "description",
+    "dc:description",
+    "dcterm:description",
+    "og:description",
+    "weibo:article:description",
+    "weibo:webpage:description",
+    "twitter:description",
 ];
-const IMAGE_KEYS: [&str; 3] = [
-    "og:image", "og:image:url", "twitter:image",
-];
-
+const IMAGE_KEYS: [&str; 3] = ["og:image", "og:image:url", "twitter:image"];
 
 pub struct Metadata {
     pub page_title: Option<String>,
@@ -27,26 +36,35 @@ pub struct Metadata {
     pub description: Option<String>,
 }
 
-
 pub fn extract(root: &NodeRef) -> Metadata {
-    let mut page_title = root.select_first("title")
+    let mut page_title = root
+        .select_first("title")
         .map(|node| node.text_contents())
         .ok();
 
     let mut article_title = get_article_title(root);
 
     match (&page_title, &article_title) {
-        (None, Some(at)) => {page_title = Some(at.clone());},
-        (Some(pt), None) => {article_title = Some(pt.clone());},
+        (None, Some(at)) => {
+            page_title = Some(at.clone());
+        }
+        (Some(pt), None) => {
+            article_title = Some(pt.clone());
+        }
         _ => (),
     }
 
     let image_url = extract_meta_content(root, &IMAGE_KEYS);
     let byline = extract_meta_content(root, &BYLINE_KEYS);
     let description = get_article_description(root);
-    Metadata {page_title, article_title, image_url, byline, description}
+    Metadata {
+        page_title,
+        article_title,
+        image_url,
+        byline,
+        description,
+    }
 }
-
 
 fn get_article_title(root: &NodeRef) -> Option<String> {
     let meta_title = extract_meta_content(root, &TITLE_KEYS);
@@ -67,11 +85,10 @@ fn get_article_title(root: &NodeRef) -> Option<String> {
     // same deal for h2's
     let mut h2s = root.select("h2").unwrap();
     if let (Some(h), None) = (h2s.next(), h2s.next()) {
-        return Some(h.text_contents())
+        return Some(h.text_contents());
     }
     None
 }
-
 
 fn get_article_description(root: &NodeRef) -> Option<String> {
     let meta_desc = extract_meta_content(root, &DESCRIPTION_KEYS);
@@ -80,11 +97,8 @@ fn get_article_description(root: &NodeRef) -> Option<String> {
     }
 
     // if the description isn't specified in a meta tag, use the text of the first <p>
-    root.select_first("p")
-        .map(|p| p.text_contents())
-        .ok()
+    root.select_first("p").map(|p| p.text_contents()).ok()
 }
-
 
 // Given a root node and a list of meta keys, return the content of the first meta tag
 // with its `name`, `property`, or `itemprop` attribute set to one of the expected types.
@@ -110,16 +124,14 @@ fn extract_meta_content(root: &NodeRef, expected_types: &[&str]) -> Option<Strin
     None
 }
 
-
 mod tests {
     #![cfg(test)]
     use super::*;
-    use kuchiki::{parse_html, traits::TendrilSink};
+    use kuchikiki::traits::TendrilSink;
 
     #[test]
     fn test_extract() {
-        const DOC: &str = 
-            "<!doctype html>
+        const DOC: &str = "<!doctype html>
             <head>
                 <title>Some Article - Some Site</title>
                 <meta name=\"og:title\" content=\"Some Article\">
@@ -130,12 +142,18 @@ mod tests {
             <body>
             </body>";
 
-        let root = kuchiki::parse_html().one(DOC);
+        let root = kuchikiki::parse_html().one(DOC);
         let metadata = extract(&root);
         assert_eq!(metadata.page_title, Some("Some Article - Some Site".into()));
         assert_eq!(metadata.article_title, Some("Some Article".into()));
-        assert_eq!(metadata.image_url, Some("https://somesite.com/image.png".into()));
+        assert_eq!(
+            metadata.image_url,
+            Some("https://somesite.com/image.png".into())
+        );
         assert_eq!(metadata.byline, Some("Joe Schmoe".into()));
-        assert_eq!(metadata.description, Some("A test article for test cases.".into()));
+        assert_eq!(
+            metadata.description,
+            Some("A test article for test cases.".into())
+        );
     }
 }

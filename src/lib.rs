@@ -1,15 +1,15 @@
 use std::cmp;
-use std::iter;
 use std::f32;
 use std::fmt;
+use std::iter;
 
-use regex::Regex;
-use html5ever::{QualName, local_name, namespace_url, ns};
-use kuchiki::{NodeRef, NodeDataRef, NodeData, ElementData, Attributes};
-use kuchiki::traits::TendrilSink;
-use kuchiki::iter::NodeIterator;
+use html5ever::{local_name, namespace_url, ns, QualName};
+use kuchikiki::iter::NodeIterator;
+use kuchikiki::traits::TendrilSink;
+use kuchikiki::{Attributes, ElementData, NodeData, NodeDataRef, NodeRef};
 use lazy_static::lazy_static;
 use log::trace;
+use regex::Regex;
 use url::Url;
 
 pub use metadata::Metadata;
@@ -27,7 +27,9 @@ trait NodeRefExt {
     fn node_ref(&self) -> &NodeRef;
 
     fn is(&self, name: QualName) -> bool {
-        self.node_ref().as_element().map_or(false, |e| e.name == name)
+        self.node_ref()
+            .as_element()
+            .map_or(false, |e| e.name == name)
     }
 
     fn replace<N: NodeRefExt>(&self, node: &N) {
@@ -43,7 +45,7 @@ trait NodeRefExt {
         let node = self.node_ref();
 
         if let Some(elem) = node.as_element() {
-            // I'd like find a way to do this without clone(), but 
+            // I'd like find a way to do this without clone(), but
             // I'm not sure how because BTreeMap doesn't have drain()
             let attributes = elem.attributes.borrow();
             let replacement = NodeRef::new_element(name, attributes.map.clone());
@@ -117,7 +119,7 @@ lazy_static! {
 }
 
 macro_rules! tag {
-    ($name:tt) => { 
+    ($name:tt) => {
         QualName {
             prefix: None,
             ns: ns!(html),
@@ -127,7 +129,9 @@ macro_rules! tag {
 }
 
 macro_rules! attrib {
-    ($name:tt) => { local_name!($name) };
+    ($name:tt) => {
+        local_name!($name)
+    };
 }
 
 fn extract_byline(elem: &ElemRef) -> Option<String> {
@@ -169,8 +173,8 @@ fn is_unlikely_candidate(elem: &ElemRef) -> bool {
     let classes = attributes.get(attrib!("class")).unwrap_or("");
     let id = attributes.get(attrib!("id")).unwrap_or("");
 
-    (UNLIKELY_CANDIDATE.is_match(classes) || UNLIKELY_CANDIDATE.is_match(id)) &&
-        !(MAYBE_CANDIDATE.is_match(classes) || MAYBE_CANDIDATE.is_match(id))
+    (UNLIKELY_CANDIDATE.is_match(classes) || UNLIKELY_CANDIDATE.is_match(id))
+        && !(MAYBE_CANDIDATE.is_match(classes) || MAYBE_CANDIDATE.is_match(id))
 }
 
 fn transform_div(div: &ElemRef) {
@@ -217,14 +221,18 @@ fn has_single_p(node: &NodeRef) -> bool {
         return false;
     }
 
-    node.children().text_nodes().all(|t| t.borrow().trim().is_empty())
+    node.children()
+        .text_nodes()
+        .all(|t| t.borrow().trim().is_empty())
 }
 
 fn has_block_elem(node: &NodeRef) -> bool {
-    node.descendants().elements().any(|elem| matches!{
-        elem.name,
-        tag!("a") | tag!("blockquote") | tag!("dl") | tag!("div") | tag!("img") | tag!("ol") |
-        tag!("p") | tag!("pre") | tag!("table") | tag!("ul") | tag!("select")
+    node.descendants().elements().any(|elem| {
+        matches! {
+            elem.name,
+            tag!("a") | tag!("blockquote") | tag!("dl") | tag!("div") | tag!("img") | tag!("ol") |
+            tag!("p") | tag!("pre") | tag!("table") | tag!("ul") | tag!("select")
+        }
     })
 }
 
@@ -254,7 +262,7 @@ fn count_chars(text: &str) -> (u32, u32) {
 }
 
 fn is_tag_to_score(tag: &QualName) -> bool {
-    matches!{
+    matches! {
         *tag,
         tag!("section") | tag!("p") | tag!("td") | tag!("pre") |
         tag!("h2") | tag!("h3") | tag!("h4") | tag!("h5") | tag!("h6")
@@ -272,7 +280,7 @@ fn tag_score(tag: &QualName) -> f32 {
         tag!("body") => -5.,
         tag!("h1") | tag!("h2") | tag!("h3") | tag!("h4") | tag!("h5") | tag!("h6") => -5.,
         tag!("th") => -5.,
-        _ => 0.
+        _ => 0.,
     }
 }
 
@@ -281,13 +289,21 @@ fn class_score(elem: &ElemRef) -> f32 {
     let mut score = 0.;
 
     if let Some(classes) = attributes.get(attrib!("class")) {
-        if POSITIVE.is_match(classes) { score += 25.; }
-        if NEGATIVE.is_match(classes) { score -= 25.; }
+        if POSITIVE.is_match(classes) {
+            score += 25.;
+        }
+        if NEGATIVE.is_match(classes) {
+            score -= 25.;
+        }
     }
 
     if let Some(id) = attributes.get(attrib!("id")) {
-        if POSITIVE.is_match(id) { score += 25.; }
-        if NEGATIVE.is_match(id) { score -= 25.; }
+        if POSITIVE.is_match(id) {
+            score += 25.;
+        }
+        if NEGATIVE.is_match(id) {
+            score -= 25.;
+        }
     }
 
     score
@@ -298,8 +314,14 @@ fn is_stuffed(elem: &ElemRef, info: &NodeInfo) -> bool {
         // TODO: remove <object>, <embed> etc.
         tag!("h1") | tag!("footer") | tag!("button") => false,
 
-        tag!("div") | tag!("section") | tag!("header") |
-        tag!("h2") | tag!("h3") | tag!("h4") | tag!("h5") | tag!("h6") => {
+        tag!("div")
+        | tag!("section")
+        | tag!("header")
+        | tag!("h2")
+        | tag!("h3")
+        | tag!("h4")
+        | tag!("h5")
+        | tag!("h6") => {
             if info.text_len == 0 {
                 let children_count = elem.as_node().children().count() as u32;
 
@@ -309,19 +331,23 @@ fn is_stuffed(elem: &ElemRef, info: &NodeInfo) -> bool {
             }
 
             true
-        },
+        }
 
         tag!("thead") | tag!("tbody") | tag!("th") | tag!("tr") | tag!("td") =>
-            // TODO: add <video> and <audio> counters to the sum.
-            info.text_len > 0 || info.img_count + info.embed_count + info.iframe_count > 0,
+        // TODO: add <video> and <audio> counters to the sum.
+        {
+            info.text_len > 0 || info.img_count + info.embed_count + info.iframe_count > 0
+        }
 
         tag!("p") | tag!("pre") | tag!("blockquote") =>
-            // TODO: add <video> and <audio> counters to the sum.
+        // TODO: add <video> and <audio> counters to the sum.
+        {
             info.img_count + info.embed_count + info.iframe_count > 0 ||
             // TODO: calculate length without construction the string.
-                !elem.text_contents().trim().is_empty(),
+                !elem.text_contents().trim().is_empty()
+        }
 
-        _ => true
+        _ => true,
     }
 }
 
@@ -352,7 +378,10 @@ fn fix_relative_urls(attributes: &mut Attributes, base_url: &Url) {
 }
 
 fn is_acceptable_top_level(tag: &QualName) -> bool {
-    matches!(*tag, tag!("div") | tag!("article") | tag!("section") | tag!("p"))
+    matches!(
+        *tag,
+        tag!("div") | tag!("article") | tag!("section") | tag!("p")
+    )
 }
 
 #[derive(Default, PartialEq, Clone)]
@@ -378,20 +407,48 @@ impl fmt::Debug for NodeInfo {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let mut s = fmt.debug_struct("");
 
-        if self.content_score > 0. { s.field("content_score", &self.content_score); }
-        if self.text_len > 0 { s.field("text", &self.text_len); }
-        if self.link_len > 0 { s.field("link", &self.link_len); }
-        if self.commas > 0 { s.field("commas", &self.commas); }
-        if self.is_candidate { s.field("candidate", &self.is_candidate); }
-        if self.is_shabby { s.field("shabby", &self.is_shabby); }
-        if self.p_count > 0 { s.field("p", &self.p_count); }
-        if self.img_count > 0 { s.field("img", &self.img_count); }
-        if self.li_count > 0 { s.field("li", &self.li_count); }
-        if self.input_count > 0 { s.field("input", &self.input_count); }
-        if self.embed_count > 0 { s.field("embed", &self.embed_count); }
-        if self.iframe_count > 0 { s.field("iframe", &self.iframe_count); }
-        if self.br_count > 0 { s.field("br", &self.br_count); }
-        if self.hr_count > 0 { s.field("hr", &self.hr_count); }
+        if self.content_score > 0. {
+            s.field("content_score", &self.content_score);
+        }
+        if self.text_len > 0 {
+            s.field("text", &self.text_len);
+        }
+        if self.link_len > 0 {
+            s.field("link", &self.link_len);
+        }
+        if self.commas > 0 {
+            s.field("commas", &self.commas);
+        }
+        if self.is_candidate {
+            s.field("candidate", &self.is_candidate);
+        }
+        if self.is_shabby {
+            s.field("shabby", &self.is_shabby);
+        }
+        if self.p_count > 0 {
+            s.field("p", &self.p_count);
+        }
+        if self.img_count > 0 {
+            s.field("img", &self.img_count);
+        }
+        if self.li_count > 0 {
+            s.field("li", &self.li_count);
+        }
+        if self.input_count > 0 {
+            s.field("input", &self.input_count);
+        }
+        if self.embed_count > 0 {
+            s.field("embed", &self.embed_count);
+        }
+        if self.iframe_count > 0 {
+            s.field("iframe", &self.iframe_count);
+        }
+        if self.br_count > 0 {
+            s.field("br", &self.br_count);
+        }
+        if self.hr_count > 0 {
+            s.field("hr", &self.hr_count);
+        }
 
         s.finish()
     }
@@ -406,7 +463,7 @@ pub struct Readability {
     weight_classes: bool,
     clean_conditionally: bool,
     clean_attributes: bool,
-    base_url: Option<Url>
+    base_url: Option<Url>,
 }
 
 impl Default for Readability {
@@ -451,18 +508,22 @@ impl Readability {
     }
 
     pub fn base_url<U>(&mut self, url: U) -> &mut Self
-        where U: Into<Option<Url>>
+    where
+        U: Into<Option<Url>>,
     {
         self.base_url = url.into();
         self
     }
 
     pub fn parse(&mut self, html: &str) -> (NodeRef, Metadata) {
-        let top_level = kuchiki::parse_html().one(html);
+        let top_level = kuchikiki::parse_html().one(html);
 
         let metadata = metadata::extract(&top_level);
 
-        let top_level = top_level.select("html > body").unwrap().next()
+        let top_level = top_level
+            .select("html > body")
+            .unwrap()
+            .next()
             .map_or(top_level, |b| b.as_node().clone());
 
         top_level.detach();
@@ -494,11 +555,15 @@ impl Readability {
             } else if let Some(parent) = current.parent() {
                 (parent, bubbling)
             } else {
-                if bubbling { self.on_bubbling(&current); }
+                if bubbling {
+                    self.on_bubbling(&current);
+                }
                 break;
             };
 
-            if bubbling { self.on_bubbling(&current); }
+            if bubbling {
+                self.on_bubbling(&current);
+            }
 
             bubbling = nbubbling;
             current = ncurrent;
@@ -532,13 +597,16 @@ impl Readability {
                 NodeData::Text(ref data) => data.borrow().trim().is_empty(),
                 NodeData::Element(ref elem) => {
                     matches!(elem.name, tag!("script") | tag!("style") | tag!("noscript"))
-                },
-                _ => false
+                }
+                _ => false,
             };
 
             if remove {
                 if child.as_element().is_some() {
-                    trace!("    => removing <{}> as useless element", format_tag(&child));
+                    trace!(
+                        "    => removing <{}> as useless element",
+                        format_tag(&child)
+                    );
                 }
 
                 child.remove();
@@ -547,17 +615,23 @@ impl Readability {
             if let Some(child) = child.into_element_ref() {
                 // TODO: mozilla/readability takes into account only first occurrence.
                 //if self.byline.is_none() {
-                    if let Some(byline) = extract_byline(&child) {
-                        self.byline = Some(byline);
-                        trace!("    => removing <{}> as byline container", format_tag(&child));
-                        child.remove();
+                if let Some(byline) = extract_byline(&child) {
+                    self.byline = Some(byline);
+                    trace!(
+                        "    => removing <{}> as byline container",
+                        format_tag(&child)
+                    );
+                    child.remove();
 
-                        continue;
-                    }
+                    continue;
+                }
                 //}
 
                 if self.strip_unlikelys && is_unlikely_candidate(&child) {
-                    trace!("    => removing <{}> as unlikely candidate", format_tag(&child));
+                    trace!(
+                        "    => removing <{}> as unlikely candidate",
+                        format_tag(&child)
+                    );
                     child.remove();
                 } else if child.is(tag!("div")) {
                     transform_div(&child);
@@ -580,9 +654,17 @@ impl Readability {
                 let parent_info = self.info.get_or_create(&parent);
                 parent_info.text_len += char_cnt;
                 parent_info.commas += comma_cnt;
-            },
-            NodeData::Element(ElementData { ref name, ref attributes, .. }) => {
-                trace!("</{}> {}", format_tag(node), format_info(self.info.get(node)));
+            }
+            NodeData::Element(ElementData {
+                ref name,
+                ref attributes,
+                ..
+            }) => {
+                trace!(
+                    "</{}> {}",
+                    format_tag(node),
+                    format_info(self.info.get(node))
+                );
 
                 // FIXME: don't propagate info of bad nodes.
                 self.propagate_info(node);
@@ -606,7 +688,8 @@ impl Readability {
                         info.is_candidate = false;
                     }
 
-                    if let Some(info) = node.parent().map(|parent| self.info.get_or_create(&parent)) {
+                    if let Some(info) = node.parent().map(|parent| self.info.get_or_create(&parent))
+                    {
                         info.is_shabby = true;
                     }
 
@@ -636,7 +719,7 @@ impl Readability {
                         fix_relative_urls(&mut attributes, base_url);
                     }
                 }
-            },
+            }
             _ => {}
         };
     }
@@ -644,7 +727,7 @@ impl Readability {
     fn propagate_info(&mut self, node: &NodeRef) {
         let parent = match node.parent() {
             Some(parent) => parent,
-            None => return
+            None => return,
         };
 
         let is_a = node.is(tag!("a"));
@@ -669,7 +752,7 @@ impl Readability {
                     if !VIDEO.is_match(src) {
                         parent_info.embed_count += 1;
                     }
-                },
+                }
                 _ => {}
             };
         }
@@ -691,11 +774,15 @@ impl Readability {
         let is_list = match elem.name {
             tag!("form") | tag!("fieldset") | tag!("table") | tag!("div") => false,
             tag!("ul") | tag!("ol") => true,
-            _ => return true
+            _ => return true,
         };
 
         // TODO: cache the score to prevent extra calculations.
-        let class_score = if self.weight_classes { class_score(elem) } else { 0. };
+        let class_score = if self.weight_classes {
+            class_score(elem)
+        } else {
+            0.
+        };
 
         if class_score < 0. {
             return false;
@@ -711,15 +798,13 @@ impl Readability {
         let p_img_ratio = info.p_count as f32 / info.img_count as f32;
 
         // TODO: take into account ancestor tags (check "figure").
-        !(
-            (info.img_count > 1 && p_img_ratio < 0.5) ||
-            (!is_list && info.li_count > info.p_count + 100) ||
-            (info.input_count * 3 > info.p_count) ||
-            (!is_list && info.text_len < 25 && (info.img_count == 0 || info.img_count > 2)) ||
-            (!is_list && class_score < 25. && link_density > 0.2) ||
-            (class_score >= 25. && link_density > 0.5) ||
-            ((info.embed_count == 1 && info.text_len < 75) || info.embed_count > 1)
-         )
+        !((info.img_count > 1 && p_img_ratio < 0.5)
+            || (!is_list && info.li_count > info.p_count + 100)
+            || (info.input_count * 3 > info.p_count)
+            || (!is_list && info.text_len < 25 && (info.img_count == 0 || info.img_count > 2))
+            || (!is_list && class_score < 25. && link_density > 0.2)
+            || (class_score >= 25. && link_density > 0.5)
+            || ((info.embed_count == 1 && info.text_len < 75) || info.embed_count > 1))
     }
 
     fn score_node(&mut self, node: &NodeRef) {
@@ -760,7 +845,7 @@ impl Readability {
             let div = match level {
                 0 => 1.,
                 1 => 2.,
-                _ => 3. * level as f32
+                _ => 3. * level as f32,
             };
 
             let addition = content_score / div;
@@ -782,8 +867,11 @@ impl Readability {
         let mut scored_candidates = Vec::with_capacity(self.candidates.len());
 
         for candidate in self.candidates.drain(..) {
-            trace!("Candidate: <{}> {}",
-                   format_tag(&candidate), format_info(self.info.get(candidate.as_node())));
+            trace!(
+                "Candidate: <{}> {}",
+                format_tag(&candidate),
+                format_info(self.info.get(candidate.as_node()))
+            );
 
             let info = self.info.get(candidate.as_node()).unwrap();
 
@@ -827,7 +915,8 @@ impl Readability {
 
         let score_threshold = scored_candidates[0].0 * 0.75;
 
-        let top_candidate_it = scored_candidates.into_iter()
+        let top_candidate_it = scored_candidates
+            .into_iter()
             .take_while(|&(score, _)| score >= score_threshold)
             .map(|(_, candidate)| candidate);
 
@@ -844,8 +933,10 @@ impl Readability {
 
         let best = self.candidates[0].as_node();
 
-        if self.candidates.len() < MIN_CANDIDATES ||
-           best.is(tag!("body")) || best.parent().map_or(true, |p| p.is(tag!("body"))) {
+        if self.candidates.len() < MIN_CANDIDATES
+            || best.is(tag!("body"))
+            || best.parent().map_or(true, |p| p.is(tag!("body")))
+        {
             return best.clone();
         }
 
@@ -858,7 +949,10 @@ impl Readability {
                 }
 
                 if n == MIN_CANDIDATES {
-                    trace!("Found common parent of top candidates: <{}>", format_tag(&common));
+                    trace!(
+                        "Found common parent of top candidates: <{}>",
+                        format_tag(&common)
+                    );
                     return common;
                 }
             }
@@ -896,8 +990,10 @@ impl Readability {
         let parent_it = candidate.ancestors().take_while(|parent| {
             let mut child_it = parent.children();
 
-            !parent.is(tag!("body")) && child_it.next().is_some() && child_it.next().is_none() &&
-                self.info.get(parent).map_or(true, |info| !info.is_shabby)
+            !parent.is(tag!("body"))
+                && child_it.next().is_some()
+                && child_it.next().is_none()
+                && self.info.get(parent).map_or(true, |info| !info.is_shabby)
         });
 
         let result = parent_it.last().map_or(candidate, |parent| {
@@ -923,7 +1019,7 @@ fn format_tag<N: NodeRefExt>(node: &N) -> String {
         (Some(id), Some(class)) => format!("{} id=\"{}\" class=\"{}\"", tag, id, class),
         (Some(id), None) => format!("{} id=\"{}\"", tag, id),
         (None, Some(class)) => format!("{} class=\"{}\"", tag, class),
-        (None, None) => format!("{}", tag)
+        (None, None) => format!("{}", tag),
     }
 }
 

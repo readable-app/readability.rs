@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
-use kuchiki::{Node, NodeRef};
-
+use kuchikiki::{Node, NodeRef};
 
 struct HashableNodeRef(NodeRef);
 
@@ -36,6 +35,6 @@ impl<T: Default> NodeCache<T> {
 
     pub fn get_or_create(&mut self, node: &NodeRef) -> &mut T {
         let key = HashableNodeRef(node.clone());
-        self.0.entry(key).or_insert_with(Default::default)
+        self.0.entry(key).or_default()
     }
 }

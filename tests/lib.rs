@@ -1,13 +1,12 @@
 use std::io::Write;
 
-use kuchiki::NodeRef;
-use kuchiki::NodeData::*;
-use kuchiki::traits::TendrilSink;
+use kuchikiki::traits::TendrilSink;
+use kuchikiki::NodeData::*;
+use kuchikiki::NodeRef;
 use serde::Deserialize;
 use url::Url;
 
-use readable_readability::{Readability, Metadata};
-
+use readable_readability::{Metadata, Readability};
 
 // duplicate the Metadata struct so we can implement Deserialize
 #[derive(Deserialize)]
@@ -19,7 +18,6 @@ struct TestMetadata {
     pub description: Option<String>,
 }
 
-
 fn compare_metadata(actual: &Metadata, expected: &TestMetadata) {
     assert_eq!(actual.page_title, expected.page_title);
     assert_eq!(actual.article_title, expected.article_title);
@@ -27,7 +25,6 @@ fn compare_metadata(actual: &Metadata, expected: &TestMetadata) {
     assert_eq!(actual.byline, expected.byline);
     assert_eq!(actual.description, expected.description);
 }
-
 
 fn compare_trees(actual: &NodeRef, expected: &NodeRef) {
     compare_nodes(actual, expected);
@@ -43,13 +40,15 @@ fn compare_trees(actual: &NodeRef, expected: &NodeRef) {
             (None, None) => break,
             (None, Some(node)) => panic!("Expected {}", stringify_node(&node)),
             (Some(node), None) => panic!("Needless {}", stringify_node(&node)),
-            (Some(one), Some(two)) => compare_trees(&one, &two)
+            (Some(one), Some(two)) => compare_trees(&one, &two),
         }
     }
 }
 
 fn is_not_empty_text(node: &NodeRef) -> bool {
-    !node.as_text().map_or(false, |text| text.borrow().trim().is_empty())
+    !node
+        .as_text()
+        .map_or(false, |text| text.borrow().trim().is_empty())
 }
 
 fn compare_nodes(actual: &NodeRef, expected: &NodeRef) {
@@ -62,9 +61,13 @@ fn compare_nodes(actual: &NodeRef, expected: &NodeRef) {
             let expected_attributes = &expected_data.attributes.borrow().map;
 
             if actual_data.name != expected_data.name || actual_attributes != expected_attributes {
-                panic!("{} != {}", stringify_node(&actual), stringify_node(&expected));
+                panic!(
+                    "{} != {}",
+                    stringify_node(&actual),
+                    stringify_node(&expected)
+                );
             }
-        },
+        }
 
         (&Text(ref actual), &Text(ref expected)) => {
             let actual = actual.borrow();
@@ -76,14 +79,14 @@ fn compare_nodes(actual: &NodeRef, expected: &NodeRef) {
             if actual_words.ne(expected_words) {
                 panic!("TEXT: {} != {}", *actual, *expected);
             }
-        },
+        }
 
-        (&Comment(_), &Comment(_)) |
-        (&Doctype(_), &Doctype(_)) |
-        (&Document(_), &Document(_)) |
-        (&DocumentFragment, &DocumentFragment) => unimplemented!(),
+        (&Comment(_), &Comment(_))
+        | (&Doctype(_), &Doctype(_))
+        | (&Document(_), &Document(_))
+        | (&DocumentFragment, &DocumentFragment) => unimplemented!(),
 
-        _ => panic!("{} != {}", stringify_node(actual), stringify_node(expected))
+        _ => panic!("{} != {}", stringify_node(actual), stringify_node(expected)),
     };
 }
 
@@ -98,13 +101,15 @@ fn stringify_node(node: &NodeRef) -> String {
 
             for slice in string.split_terminator('>') {
                 pos += slice.len() + 1;
-                if pos >= LIMIT { break; }
+                if pos >= LIMIT {
+                    break;
+                }
             }
 
             string[..pos].to_owned()
-        },
+        }
         _ if string.len() > LIMIT => format!("{}...", &string[..LIMIT]),
-        _ => string
+        _ => string,
     }
 }
 
@@ -118,7 +123,7 @@ fn setup_logger() {
 macro_rules! include_sample_file {
     ($name:ident, $file:expr) => {
         include_str!(concat!("../samples/", stringify!($name), "/", $file))
-    }
+    };
 }
 
 macro_rules! test_sample {
@@ -135,8 +140,14 @@ macro_rules! test_sample {
                 .base_url(Url::parse("http://fakehost/test/page.html").unwrap())
                 .parse(SOURCE);
 
-            let expected_tree = kuchiki::parse_html().one(EXPECTED)
-                .select("body > *").unwrap().next().unwrap().as_node().clone();
+            let expected_tree = kuchikiki::parse_html()
+                .one(EXPECTED)
+                .select("body > *")
+                .unwrap()
+                .next()
+                .unwrap()
+                .as_node()
+                .clone();
 
             compare_trees(&actual_tree, &expected_tree);
 
