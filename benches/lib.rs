@@ -10,11 +10,10 @@ use url::Url;
 
 use readable_readability::Readability;
 
-
 macro_rules! include_sample_file {
     ($name:ident, $file:expr) => {
         include_str!(concat!("../samples/", stringify!($name), "/", $file))
-    }
+    };
 }
 
 macro_rules! bench_sample {
@@ -23,10 +22,11 @@ macro_rules! bench_sample {
         fn $name(b: &mut Bencher) {
             static SOURCE: &'static str = include_sample_file!($name, "source.html");
 
-            b.iter(||
+            b.iter(|| {
                 Readability::new()
                     .base_url(Url::parse("http://fakehost/test/page.html").unwrap())
-                    .parse(SOURCE));
+                    .parse(SOURCE)
+            });
         }
     };
 }
