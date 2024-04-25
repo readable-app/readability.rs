@@ -1,5 +1,5 @@
 use html5ever::local_name;
-use kuchiki::NodeRef;
+use kuchikiki::NodeRef;
 
 const TITLE_KEYS: [&str; 6] = [
     "og:title",
@@ -127,7 +127,7 @@ fn extract_meta_content(root: &NodeRef, expected_types: &[&str]) -> Option<Strin
 mod tests {
     #![cfg(test)]
     use super::*;
-    use kuchiki::traits::TendrilSink;
+    use kuchikiki::traits::TendrilSink;
 
     #[test]
     fn test_extract() {
@@ -142,7 +142,7 @@ mod tests {
             <body>
             </body>";
 
-        let root = kuchiki::parse_html().one(DOC);
+        let root = kuchikiki::parse_html().one(DOC);
         let metadata = extract(&root);
         assert_eq!(metadata.page_title, Some("Some Article - Some Site".into()));
         assert_eq!(metadata.article_title, Some("Some Article".into()));

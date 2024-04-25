@@ -1,8 +1,8 @@
 use std::io::Write;
 
-use kuchiki::traits::TendrilSink;
-use kuchiki::NodeData::*;
-use kuchiki::NodeRef;
+use kuchikiki::traits::TendrilSink;
+use kuchikiki::NodeData::*;
+use kuchikiki::NodeRef;
 use serde::Deserialize;
 use url::Url;
 
@@ -140,7 +140,7 @@ macro_rules! test_sample {
                 .base_url(Url::parse("http://fakehost/test/page.html").unwrap())
                 .parse(SOURCE);
 
-            let expected_tree = kuchiki::parse_html()
+            let expected_tree = kuchikiki::parse_html()
                 .one(EXPECTED)
                 .select("body > *")
                 .unwrap()

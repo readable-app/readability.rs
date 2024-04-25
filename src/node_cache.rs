@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
-use kuchiki::{Node, NodeRef};
+use kuchikiki::{Node, NodeRef};
 
 struct HashableNodeRef(NodeRef);
 

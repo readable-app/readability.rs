@@ -11,8 +11,8 @@ readme = "README.md"
 
 [dependencies]
 log = "0.4.17"
-kuchiki = "0.8.1"
-html5ever = "0.25.2"
+kuchikiki = "0.8.1"
+html5ever = "0.26.0"
 lazy_static = "1.4.0"
 regex = "1.6.0"
 url = "2.3.1"

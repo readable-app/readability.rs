@@ -4,9 +4,9 @@ use std::fmt;
 use std::iter;
 
 use html5ever::{local_name, namespace_url, ns, QualName};
-use kuchiki::iter::NodeIterator;
-use kuchiki::traits::TendrilSink;
-use kuchiki::{Attributes, ElementData, NodeData, NodeDataRef, NodeRef};
+use kuchikiki::iter::NodeIterator;
+use kuchikiki::traits::TendrilSink;
+use kuchikiki::{Attributes, ElementData, NodeData, NodeDataRef, NodeRef};
 use lazy_static::lazy_static;
 use log::trace;
 use regex::Regex;
@@ -516,7 +516,7 @@ impl Readability {
     }
 
     pub fn parse(&mut self, html: &str) -> (NodeRef, Metadata) {
-        let top_level = kuchiki::parse_html().one(html);
+        let top_level = kuchikiki::parse_html().one(html);
 
         let metadata = metadata::extract(&top_level);
 
